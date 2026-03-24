@@ -1,0 +1,137 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum ConversationType {
+  DIRECT
+  GROUP
+}
+
+enum MemberRole {
+  ADMIN
+  MEMBER
+}
+
+enum MessageType {
+  TEXT
+  IMAGE
+  DOCUMENT
+}
+
+enum MessageStatusType {
+  SENT
+  DELIVERED
+  READ
+}
+
+enum StoryType {
+  TEXT
+  IMAGE
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  name         String
+  avatar       String?
+  bio          String   @default("")
+  isOnline     Boolean  @default(false)
+  lastSeen     DateTime @default(now())
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  createdConversations ConversationMember[]
+  conversations        Conversation[]       @relation("CreatedBy")
+  messages             Message[]
+  messageStatuses      MessageStatus[]
+  stories              Story[]
+  storyViews           StoryView[]
+}
+
+model Conversation {
+  id          String           @id @default(cuid())
+  type        ConversationType
+  name        String?
+  avatar      String?
+  isLocked    Boolean          @default(false)
+  createdById String
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  createdBy User                 @relation("CreatedBy", fields: [createdById], references: [id])
+  members   ConversationMember[]
+  messages  Message[]
+}
+
+model ConversationMember {
+  conversationId String
+  userId         String
+  role           MemberRole @default(MEMBER)
+  joinedAt       DateTime   @default(now())
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([conversationId, userId])
+}
+
+model Message {
+  id             String      @id @default(cuid())
+  conversationId String
+  senderId       String
+  content        String?
+  type           MessageType @default(TEXT)
+  mediaUrl       String?
+  createdAt      DateTime    @default(now())
+
+  conversation Conversation    @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sender       User            @relation(fields: [senderId], references: [id], onDelete: Cascade)
+  statuses     MessageStatus[]
+
+  @@index([conversationId, createdAt])
+}
+
+model MessageStatus {
+  messageId String
+  userId    String
+  status    MessageStatusType @default(SENT)
+  updatedAt DateTime          @updatedAt
+
+  message Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([messageId, userId])
+}
+
+model Story {
+  id              String    @id @default(cuid())
+  userId          String
+  type            StoryType
+  content         String?
+  mediaUrl        String?
+  backgroundColor String?
+  expiresAt       DateTime
+  createdAt       DateTime  @default(now())
+
+  user  User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  views StoryView[]
+
+  @@index([expiresAt])
+}
+
+model StoryView {
+  storyId  String
+  viewerId String
+  viewedAt DateTime @default(now())
+
+  story  Story @relation(fields: [storyId], references: [id], onDelete: Cascade)
+  viewer User  @relation(fields: [viewerId], references: [id], onDelete: Cascade)
+
+  @@id([storyId, viewerId])
+}

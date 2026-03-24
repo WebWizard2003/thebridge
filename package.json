@@ -1,0 +1,17 @@
+{
+  "name": "realtimechat",
+  "private": true,
+  "workspaces": [
+    "server",
+    "client"
+  ],
+  "scripts": {
+    "dev": "npx concurrently -n db,server,client -c yellow,blue,green \"docker compose up\" \"npm run dev -w server\" \"npm run dev -w client\"",
+    "db:push": "npm run db:push -w server",
+    "db:generate": "npm run db:generate -w server",
+    "db:seed": "npm run db:seed -w server"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1"
+  }
+}
